@@ -7,10 +7,20 @@
 
   let hot: Handsontable | undefined;
   let result: Handsontable | undefined;
+  let summaryText = "";
+  let resultText = "";
 
   let colsCount = 1;
   let sum = 0;
   let data: any[] = [];
+
+  init();
+  function init() {
+    data = new Array(20)
+      .fill(0)
+      .map(() => [((Math.random() - 0.35) * 20).toFixed(0)]);
+  }
+
   // user data
   let amountColIdx = 0;
   let nOfColumnData = colsCount;
@@ -21,15 +31,22 @@
     sum = sum;
   }
 
-  function caculate() {
+  function calculate() {
     // data = hot?.getSourceData() || [];
 
     const amountCol = hot?.getDataAtCol(amountColIdx);
     const subset = findSubsetWithSum(
-      amountCol?.map((n) => parseFloat(n) || 0) || [],
+      amountCol?.map((n) => parseFloat(n) || 0) || []
     );
     if (subset) {
-      result?.loadData(subset.map((n) => [n]));
+      summaryText = `length: ${subset.length}, sum: ${subset.reduce(
+        (pre, cur) => pre + cur
+      )}`;
+      if (subset.length < 300) {
+        result?.loadData(subset.map((n) => [n]));
+      } else {
+        resultText = subset.join("\n");
+      }
     }
   }
 
@@ -49,9 +66,11 @@
   onMount(() => {
     const container = document.querySelector<HTMLDivElement>("#table")!;
     hot = new Handsontable(container, {
+      data,
       startRows: 10,
       startCols: colsCount,
       afterChange: summary,
+      renderAllRows: true,
       width: "auto",
       height: "auto",
       colWidths: 200,
@@ -86,7 +105,14 @@
 </script>
 
 <main class="flex justify-center align-middle items-center min-h-screen">
-  <div class="w-2/3 resize-x overflow-auto mx-auto">
+  <div class="w-1/2 resize-x overflow-auto mx-auto">
+    <button
+      class="btn btn-sm btn-warning"
+      on:click={() => {
+        init();
+        hot?.loadData(data);
+      }}>Refresh demo data</button
+    >
     <div class="w-full m-2">
       <label class="form-control w-full max-w-xs">
         <div class="label">
@@ -121,11 +147,15 @@
       </div>
     </div>
 
-    <div class="controls m-2">
-      <button on:click={caculate} class="btn btn-primary">Caculate</button>
-    </div>
+    <div>
+      <div class="controls m-2">
+        <button on:click={calculate} class="btn btn-primary">Calculate</button>
+      </div>
 
-    <h2 class="text-xl">Result</h2>
-    <div id="result"></div>
+      <h2 class="text-xl">Result</h2>
+      <p class="text-lg">{summaryText}</p>
+      <div id="result"></div>
+      <pre contenteditable>{resultText}</pre>
+    </div>
   </div>
 </main>

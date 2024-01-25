@@ -34,7 +34,7 @@ export function findSubsetWithSum(arr: number[]): number[] | null {
 
   while (i > 0 && j > 0) {
     if (dp[i][j] && !dp[i - 1][j]) {
-      subset.push(arr[i - 1]);
+      subset.unshift(arr[i - 1]);
       j -= arr[i - 1];
     }
     i--;
