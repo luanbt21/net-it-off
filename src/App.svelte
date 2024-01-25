@@ -1,36 +1,57 @@
 <script lang="ts">
   import { onMount } from "svelte";
-
   import Handsontable from "handsontable";
   import "handsontable/dist/handsontable.full.min.css";
 
-  let text = `3	2023	Kg
-2	2023	Kg
--1	2023	Kg
--2	2023	Kg`;
+  import { findSubsetWithSum } from "./utils";
 
-  const data = text.split("\n").map((line) => line.split("\t"));
-  console.log(data);
+  let hot: Handsontable | undefined;
+  let result: Handsontable | undefined;
+
+  let colsCount = 1;
+  let sum = 0;
+  let data: any[] = [];
+  // user data
+  let amountColIdx = 0;
+  let nOfColumnData = colsCount;
+
+  $: if (colsCount) {
+    const amountCol = hot?.getDataAtCol(amountColIdx) || [];
+    sumData(amountCol);
+    sum = sum;
+  }
+
+  function caculate() {
+    // data = hot?.getSourceData() || [];
+
+    const amountCol = hot?.getDataAtCol(amountColIdx);
+    const subset = findSubsetWithSum(
+      amountCol?.map((n) => parseFloat(n) || 0) || [],
+    );
+    if (subset) {
+      result?.loadData(subset.map((n) => [n]));
+    }
+  }
+
+  function summary() {
+    colsCount = hot?.countCols() || 0;
+    nOfColumnData = colsCount;
+    const amountCol = hot?.getDataAtCol(amountColIdx) || [];
+    sumData(amountCol);
+  }
+
+  function sumData(numbers: string[]) {
+    sum = numbers
+      .map((n) => parseFloat(n) || 0)
+      .reduce((pre, cur) => pre + cur, 0);
+  }
 
   onMount(() => {
-    const output = document.querySelector<HTMLOutputElement>("#output")!;
-    const getButton = document.querySelector<HTMLButtonElement>("#getButton")!;
-
     const container = document.querySelector<HTMLDivElement>("#table")!;
-    const hot = new Handsontable(container, {
-      // data: [
-      //   ["A1", "B1", "C1", "D1", "E1", "F1", "G1", "H1", "I1"],
-      //   ["A2", "B2", "C2", "D2", "E2", "F2", "G2", "H2", "I2"],
-      //   ["A3", "B3", "C3", "D3", "E3", "F3", "G3", "H3", "I3"],
-      //   ["A4", "B4", "C4", "D4", "E4", "F4", "G4", "H4", "I4"],
-      //   ["A5", "B5", "C5", "D5", "E5", "F5", "G5", "H5", "I5"],
-      //   ["A6", "B6", "C6", "D6", "E6", "F6", "G6", "H6", "I6"],
-      //   ["A7", "B7", "C7", "D7", "E7", "F7", "G7", "H7", "I7"],
-      //   ["A8", "B8", "C8", "D8", "E8", "F8", "G8", "H8", "I8"],
-      //   ["A9", "B9", "C9", "D9", "E9", "F9", "G9", "H9", "I9"],
-      // ],
+    hot = new Handsontable(container, {
       startRows: 10,
-      startCols: 4,
+      startCols: colsCount,
+      afterChange: summary,
       width: "auto",
       height: "auto",
       colWidths: 200,
@@ -44,27 +65,67 @@
       licenseKey: "non-commercial-and-evaluation",
     });
 
-    getButton.addEventListener("click", (event) => {
-      const selected = hot.getSelected() || [];
-      const data = [];
-
-      for (let i = 0; i < selected.length; i += 1) {
-        const item = selected[i];
-
-        data.push(hot.getData(...item));
-      }
-
-      output.innerText = JSON.stringify(data);
+    const resultContainer = document.querySelector<HTMLDivElement>("#result")!;
+    result = new Handsontable(resultContainer, {
+      startRows: 0,
+      startCols: 0,
+      width: "auto",
+      height: "auto",
+      colWidths: 200,
+      rowHeights: 23,
+      rowHeaders: true,
+      colHeaders: true,
+      outsideClickDeselects: false,
+      selectionMode: "multiple",
+      autoWrapRow: true,
+      autoWrapCol: true,
+      licenseKey: "non-commercial-and-evaluation",
     });
+    summary();
   });
 </script>
 
 <main class="flex justify-center align-middle items-center min-h-screen">
-  <div class="w-1/2 resize-x overflow-auto mx-auto">
-    <div id="table"></div>
-    <output class="console" id="output">Here you will see the log</output>
-    <div class="controls">
-      <button id="getButton">Get data</button>
+  <div class="w-2/3 resize-x overflow-auto mx-auto">
+    <div class="w-full m-2">
+      <label class="form-control w-full max-w-xs">
+        <div class="label">
+          <span class="label-text">How many columns of data do you have?</span>
+        </div>
+        <select class="select select-bordered" bind:value={nOfColumnData}>
+          {#each new Array(colsCount) as _, i}
+            <option value={i + 1}>{i + 1}</option>
+          {/each}
+        </select>
+      </label>
+
+      <label class="form-control w-full max-w-xs">
+        <div class="label">
+          <span class="label-text">Which the amount column?</span>
+        </div>
+        <select class="select select-bordered" bind:value={amountColIdx}>
+          {#each new Array(colsCount) as _, i}
+            <option value={i}>{String.fromCharCode(65 + i)}</option>
+          {/each}
+        </select>
+      </label>
     </div>
+
+    <div id="table"></div>
+
+    <div class="stats shadow m-2">
+      <div class="stat">
+        <div class="stat-title">Amount Sum</div>
+        <div class="stat-value">{sum}</div>
+        <!-- <div class="stat-desc">21% more than last month</div> -->
+      </div>
+    </div>
+
+    <div class="controls m-2">
+      <button on:click={caculate} class="btn btn-primary">Caculate</button>
+    </div>
+
+    <h2 class="text-xl">Result</h2>
+    <div id="result"></div>
   </div>
 </main>
